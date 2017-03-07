@@ -168,6 +168,22 @@ trait IterableMonoTransforms[+A, +Repr] extends Any {
     if (coll.isEmpty) throw new UnsupportedOperationException
     drop(1)
   }
+
+  /** Traditional GroupBy */
+  def groupBy[K](f: A => K): scala.collection.immutable.Map[K, Repr] = {
+    import mutable.ArrayBuffer
+    val m = scala.collection.mutable.Map.empty[K, ArrayBuffer[A]]
+    for (elem <- coll) {
+      val key = f(elem)
+      val bldr = m.getOrElseUpdate(key, new ArrayBuffer)
+      bldr += elem
+    }
+    val b = scala.collection.immutable.Map.newBuilder[K, Repr]
+    for ((k, v) <- m) // `fromIterableWithSameElemType` allowing reuse of local ArrayBuffer
+      b += ((k, fromIterableWithSameElemType(View.fromIterator(v.iterator))))
+    b.result
+  }
+
 }
 
 /** Transforms over iterables that can return collections of different element types.
@@ -188,4 +204,8 @@ trait IterablePolyTransforms[+A, +C[A]] extends Any {
   /** Zip. Interesting because it requires to align to source collections. */
   def zip[B](xs: IterableOnce[B]): C[(A @uncheckedVariance, B)] = fromIterable(View.Zip(coll, xs))
   // sound bcs of VarianceNote
+
+  /** More sensible Group By, allowing to map the values and producing a C[(K, View[A])] */
+  def viewBy[K,V](fk: A => K, fv: A => V = (a:A) => a): C[(K, View[V])] = fromIterable(View.ViewBy(coll, fk, fv))
+
 }

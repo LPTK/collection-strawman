@@ -96,6 +96,11 @@ object View {
     override def knownSize = underlying.knownSize
   }
 
+  /** A view that groups and maps elements of the underlying collection. */
+  case class ViewBy[A, K, V](underlying: Iterable[A], fk: A => K, fv: A => V) extends View[(K, View[V])] {
+    def iterator() = underlying.iterator().viewBy(fk,fv)
+  }
+
   /** A view that flatmaps elements of the underlying collection. */
   case class FlatMap[A, B](underlying: Iterable[A], f: A => IterableOnce[B]) extends View[B] {
     def iterator() = underlying.iterator().flatMap(f)

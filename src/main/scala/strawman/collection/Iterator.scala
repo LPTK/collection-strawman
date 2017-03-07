@@ -51,6 +51,17 @@ trait Iterator[+A] extends IterableOnce[A] { self =>
     def next() = f(self.next())
   }
 
+  def viewBy[K,V](fk: A => K, fv: A => V): Iterator[(K, View[V])] = {
+    import mutable.ArrayBuffer
+    val m = scala.collection.mutable.Map.empty[K, ArrayBuffer[V]]
+    for (elem <- this) {
+      val key = fk(elem)
+      val bldr = m.getOrElseUpdate(key, new ArrayBuffer[V])
+      bldr += fv(elem)
+    }
+    m.mapValues(_.view).iterator.toStrawman
+  }
+
   def flatMap[B](f: A => IterableOnce[B]): Iterator[B] = new Iterator[B] {
     private var myCurrent: Iterator[B] = Iterator.empty
     private def current = {
